@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+
+# SPDX-License-Identifier: MIT
+
+# Copyright (c) 2024 multiplealiases
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# “Software”), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+# NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+# OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+# THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+set -o nounset
+set -o errexit
+
+function die {
+    # shellcheck disable=SC2059
+    printf "$@"
+    exit 1
+}
+
+function banner() {
+    echo Posterizes text using FFmpeg\'s elbg filter
+}
+
+function usage() {
+cat << EOF
+Usage: text-posterizer [options] < filename
+    or (...) | text-posterizer [options]
+    or (...) | text-posterizer [options] | (...)
+EOF
+}
+
+function help_text() {
+    cat << EOF
+$(banner)
+$(usage)
+
+Defaults shown in [].
+Options:
+-c, --colors       length of codebook, or number of "colors" per window [16]
+-w, --width        width of window of text [64]
+-s, --steps        max number of iterations for posterization [1]
+-p, --pix-fmt      pixel format to convert text to [gray8]
+-h, --help         this help
+EOF
+}
+
+cleanup_array="$(mktemp)"
+function cleanup() {
+    < "$cleanup_array" xargs -0 -I{} rm -rf {}
+    rm -f "$cleanup_array"
+}
+
+function append_mktemp() {
+    tmp="$(mktemp "$@")"
+    printf "%s\0" "$tmp" >> "$cleanup_array"
+    printf "%s\n" "$tmp"
+}
+trap 'cleanup' ERR EXIT
+
+ARGS="$(getopt --options h,c:,w:,s:,p: --long help,bitrate:,width:,steps:,pix-fmt: -- "$@")"
+eval set -- "$ARGS"
+while [[ $# -gt 0 ]]
+do
+    case "$1" in
+    -h | --help)
+        help_text
+        exit 1
+        ;;
+    -c | --colors)
+        colors="$2"
+        shift 2
+        ;;
+    -w | --width)
+        width="$2"
+        shift 2
+        ;;
+    -s | --steps)
+        steps="$2"
+        shift 2
+        ;;
+    -p | --pix-fmt)
+        pix_fmt="$2"
+        shift 2
+        ;;
+    *)
+        shift
+        ;;
+    esac
+done
+
+pix_fmt="${pix_fmt:-gray8}"
+steps="${steps:-1}"
+width="${width:-64}"
+colors="${colors:-16}"
+resolution="$width"x1
+
+tmp=$(append_mktemp)
+cat > "$tmp"
+truncate --size=+"$((width * 8))" "$tmp"
+
+ffmpeg -loglevel quiet -f rawvideo -s "$resolution" -pix_fmt "$pix_fmt" -i "$tmp" -c:v ffv1 -filter:v "elbg=l=$colors:n=$steps:use_alpha=1" -f nut - | \
+ffmpeg -loglevel quiet -i - -f rawvideo -s "$resolution" -pix_fmt "$pix_fmt" - | tr -d '\0'
+# Add a newline for safety.
+echo

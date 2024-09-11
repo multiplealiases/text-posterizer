@@ -1,0 +1,18 @@
+Bias in computer systems exists because every computer program is by
+necessity written from a particular point of view. So what I tell my
+students in introductory programming classes is this: programming is
+forgetting. And this is both a methodology and a warning.
+
+The process of computer programming is taking the world, which is
+infinitely variable, mysterious, and unknowable (if you’ll excuse
+a little turn towards the woo in this talk) and turning it into
+procedures and data. And we have a number of different names for this
+process: scanning, sampling, digitizing, transcribing, schematizing,
+programming. But the result is the same. The world, which consists of
+analog phenomena infinite and unknowable, is reduced to the repeatable
+and the discrete.
+
+In the process of programming, or scanning or sampling or digitizing or
+transcribing, much of the world is left out or forgotten. Programming is
+an attempt to get a handle on a small part of the world so we can analyze
+and reason about it. But a computer program is never itself the world.
