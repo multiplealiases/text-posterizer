@@ -52,7 +52,7 @@ $(usage)
 Defaults shown in [].
 Options:
 -c, --colors       length of codebook, or number of "colors" per window [16]
--w, --width        width of window of text [64]
+-w, --width        width of window of text (number or 'all') [64]
 -s, --steps        max number of iterations for posterization [1]
 -p, --pix-fmt      pixel format to convert text to [gray8]
 -n, --no-newline   disable newline at the end of output
@@ -110,14 +110,20 @@ done
 
 pix_fmt="${pix_fmt:-gray8}"
 steps="${steps:-1}"
-width="${width:-64}"
-colors="${colors:-16}"
-resolution="$width"x1
-newline="${newline-:yes}"
 
 tmp=$(append_mktemp)
 cat > "$tmp"
+if [[ $width == "all" ]]
+then
+    bytecount="$(wc --bytes < "$tmp")"
+    width="$bytecount"
+fi
 truncate --size=+"$((width * 8))" "$tmp"
+
+width="${width:-64}"
+colors="${colors:-16}"
+resolution="$width"x1
+newline="${newline:-yes}"
 
 ffmpeg -loglevel quiet -f rawvideo -s "$resolution" -pix_fmt "$pix_fmt" -i "$tmp" -c:v ffv1 -filter:v "elbg=l=$colors:n=$steps:use_alpha=1" -f nut - | \
 ffmpeg -loglevel quiet -i - -f rawvideo -s "$resolution" -pix_fmt "$pix_fmt" - | tr -d '\0'
