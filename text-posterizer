@@ -110,6 +110,7 @@ done
 
 pix_fmt="${pix_fmt:-gray8}"
 steps="${steps:-1}"
+width="${width:-64}"
 
 tmp=$(append_mktemp)
 cat > "$tmp"
@@ -120,7 +121,6 @@ then
 fi
 truncate --size=+"$((width * 8))" "$tmp"
 
-width="${width:-64}"
 colors="${colors:-16}"
 resolution="$width"x1
 newline="${newline:-yes}"
